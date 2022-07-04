@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies.window]
 path = "window"
+[dependencies]
+pollster = "0.2" # used to await future
