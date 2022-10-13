@@ -14,7 +14,51 @@ struct State {
 
 impl State {
     async fn new(window: &Window) -> Self {
-        todo!()
+        let size = window.inner_size();
+
+        // instance is handle to GPU: creates Adapters & Surfaces
+        let instance = wgpu::Instance::new(wgpu::Backends::VULKAN);
+        // surface is used to draw to window; needs to implement
+        // raw-window-handle, thus it is unsafe
+        let surface = unsafe { instance.create_surface(window) };
+        // adapter is handle to graphics card: get info, create Device & Queue
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::default(),
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await
+            .unwrap();
+
+        let (device, queue) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    features: wgpu::Features::empty(),
+                    limits: wgpu::Limits::default(),
+                    label: None,
+                },
+                None,
+            )
+            .await
+            .unwrap();
+
+        // config is to define surface creation of SurfaceTexture
+        let config = wgpu::SurfaceConfiguration {
+            // how SurfaceTextures are used
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT, // to write to window
+            // how SurfaceTextures are stored
+            format: surface.get_supported_formats(&adapter)[0],
+            // width & height cannot be 0
+            width: size.width,
+            height: size.height,
+            // how to sync surface with display
+            present_mode: wgpu::PresentMode::Fifo, // vsync
+            alpha_mode: wgpu::CompositeAlphaMode::Opaque,
+        };
+        surface.configure(&device, &config);
+
+        Self { surface, device, queue, config, size }
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -34,10 +78,12 @@ impl State {
     }
 }
 
-pub fn run() {
+pub async fn run() {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
+
+    let mut state = State::new(&window).await;
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent { ref event, window_id }
