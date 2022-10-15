@@ -71,7 +71,7 @@ impl State {
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        todo!()
+        false
     }
 
     fn update(&mut self) {
@@ -94,25 +94,27 @@ pub async fn run() {
         Event::WindowEvent { ref event, window_id }
             if window_id == window.id() =>
         {
-            match event {
-                WindowEvent::CloseRequested
-                | WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            state: ElementState::Pressed,
-                            virtual_keycode: Some(VirtualKeyCode::Escape),
-                            ..
-                        },
-                    ..
-                } => *control_flow = ControlFlow::Exit,
+            if !state.input(event) {
+                match event {
+                    WindowEvent::CloseRequested
+                    | WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    } => *control_flow = ControlFlow::Exit,
 
-                WindowEvent::Resized(physical_size) => {
-                    state.resize(physical_size.cast());
+                    WindowEvent::Resized(physical_size) => {
+                        state.resize(physical_size.cast());
+                    }
+                    WindowEvent::ScaleFactorChanged {
+                        new_inner_size, ..
+                    } => state.resize(new_inner_size.cast()),
+                    _ => {}
                 }
-                WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                    state.resize(new_inner_size.cast())
-                }
-                _ => {}
             }
         }
         _ => {}
