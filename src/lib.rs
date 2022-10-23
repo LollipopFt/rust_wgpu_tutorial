@@ -10,6 +10,7 @@ struct State {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
+    render_pipeline: wgpu::RenderPipeline,
 }
 
 impl State {
@@ -58,7 +59,66 @@ impl State {
         };
         surface.configure(&device, &config);
 
-        Self { surface, device, queue, config, size }
+        let shader =
+            device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            });
+
+        let render_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Render Pipeline"),
+                layout: Some(&render_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    // tells wgpu what types of vertices to pass to vertex shader:
+                    // vertices specified in vertex shader itself so this is empty
+                    buffers: &[],
+                },
+                primitive: wgpu::PrimitiveState {
+                    // 3 vertices correspond to 1 triangle
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    // tells wgpu whether given triangle is forward facing:
+                    // facing forward if vertices are counter-clockwise
+                    front_face: wgpu::FrontFace::Ccw,
+                    // triangles not facing forward are culled
+                    cull_mode: Some(wgpu::Face::Back),
+                    unclipped_depth: false,
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState {
+                    // how many samples pipeline will use
+                    count: 1,
+                    // which samples are active: all samples used
+                    mask: !0,
+                    // anti-aliasing
+                    alpha_to_coverage_enabled: false,
+                },
+                // stores colour data to surface
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    // tells wgpu what colour outputs to set up
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: config.format,
+                        blend: Some(wgpu::BlendState::REPLACE),
+                        write_mask: wgpu::ColorWrites::COLOR,
+                    })],
+                }),
+                // how many array layers render attachments can have:
+                // not using array textures
+                multiview: None,
+            });
+
+        Self { surface, device, queue, config, size, render_pipeline }
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
