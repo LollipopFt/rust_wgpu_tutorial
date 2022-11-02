@@ -147,7 +147,7 @@ impl State {
         );
         // clearing the screen
         // use encoder to create RenderPass which has methods for actual drawing
-        let render_pass =
+        let mut render_pass =
             encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -165,6 +165,9 @@ impl State {
                 })],
                 depth_stencil_attachment: None,
             });
+        render_pass.set_pipeline(&self.render_pipeline);
+        // tells wgpu to draw something with 3 vertices & 1 instance
+        render_pass.draw(0..3, 0..1);
         // dropped as encoder.finish() until mutable borrow here is released
         drop(render_pass);
 

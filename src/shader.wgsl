@@ -23,6 +23,6 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
 @fragment
 //@location(0): store returned vec4 in first colour target
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // set colour of current fragment to brown
-    return vec4<f32>(0.3, 0.2, 0.1, 1.);
+    // set colour of current fragment to grey
+    return vec4<f32>(0.5, 0.5, 0.5, 1.);
 }
