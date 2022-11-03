@@ -1,3 +1,4 @@
+use wgpu::util::DeviceExt;
 use winit::{
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -11,7 +12,22 @@ struct State {
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
+    vertex_buffer: wgpu::Buffer,
 }
+
+#[repr(C)]
+// bytemuck traits needed for fn cast_slice()
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+    pos: [f32; 3],
+    color: [f32; 3],
+}
+
+const VERTICES: &[Vertex] = &[
+    Vertex { pos: [0., 0.5, 0.], color: [1., 0., 0.] },
+    Vertex { pos: [-0.5, -0.5, 0.], color: [0., 1., 0.] },
+    Vertex { pos: [0.5, -0.5, 0.], color: [0., 0., 1.] },
+];
 
 impl State {
     async fn new(window: &Window) -> Self {
@@ -118,7 +134,22 @@ impl State {
                 multiview: None,
             });
 
-        Self { surface, device, queue, config, size, render_pipeline }
+        let vertex_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(VERTICES),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+        Self {
+            surface,
+            device,
+            queue,
+            config,
+            size,
+            render_pipeline,
+            vertex_buffer,
+        }
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
