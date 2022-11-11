@@ -13,6 +13,7 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    num_vertices: u32,
 }
 
 #[repr(C)]
@@ -94,7 +95,7 @@ impl State {
                     entry_point: "vs_main",
                     // tells wgpu what types of vertices to pass to vertex shader:
                     // vertices specified in vertex shader itself so this is empty
-                    buffers: &[],
+                    buffers: &[Vertex::desc()],
                 },
                 primitive: wgpu::PrimitiveState {
                     // 3 vertices correspond to 1 triangle
@@ -141,6 +142,8 @@ impl State {
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
+        let num_vertices = VERTICES.len() as u32;
+
         Self {
             surface,
             device,
@@ -149,6 +152,7 @@ impl State {
             size,
             render_pipeline,
             vertex_buffer,
+            num_vertices,
         }
     }
 
@@ -197,14 +201,41 @@ impl State {
                 depth_stencil_attachment: None,
             });
         render_pass.set_pipeline(&self.render_pipeline);
+        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         // tells wgpu to draw something with 3 vertices & 1 instance
-        render_pass.draw(0..3, 0..1);
+        render_pass.draw(0..self.num_vertices, 0..1);
         // dropped as encoder.finish() until mutable borrow here is released
         drop(render_pass);
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
         Ok(())
+    }
+}
+
+impl Vertex {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        wgpu::VertexBufferLayout {
+            // array stride: how wide a vertex is
+            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            // whether element in array is per-vertex/per-instance
+            step_mode: wgpu::VertexStepMode::Vertex,
+            // 1:1 mapping of struct fields
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    // shape of attribute: Float32x3 = vec3<f32> -> max is 32x4
+                    format: wgpu::VertexFormat::Float32x3,
+                },
+                wgpu::VertexAttribute {
+                    offset: std::mem::size_of::<[f32; 3]>()
+                        as wgpu::BufferAddress,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x3,
+                },
+            ],
+        }
     }
 }
 
