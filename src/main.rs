@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use wgpu_tut::run;
 
 #[tokio::main(flavor = "current_thread")]
